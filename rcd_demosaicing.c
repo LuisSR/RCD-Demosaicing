@@ -14,16 +14,15 @@ void CLASS rcd_demosaicing_171117()
     static const float eps = 1e-5, epssq = 1e-10;
 
     //Gradients
-    float Ngrad, Egrad, Wgrad, Sgrad, NWgrad, NEgrad, SWgrad, SEgrad;
+    float N_Grad, E_Grad, W_Grad, S_Grad, NW_Grad, NE_Grad, SW_Grad, SE_Grad;
 
     //Pixel estimation
-    float Nest, Eest, West, Sest, NWest, NEest, SWest, SEest;
-    float vint, hint, pint, qint;
+    float N_Est, E_Est, W_Est, S_Est, NW_Est, NE_Est, SW_Est, SE_Est, V_Est, H_Est, P_Est, Q_Est;
 
     //Directional discrimination
-    float vstat, hstat, vstatalt, mstat, pstat, mstatalt;
-    float vh_central_value, vh_neighbour_value, mp_central_value, mp_neighbour_value;
-    float ( *vhdir ), ( *vhdisc ), ( *mpdir ), ( *mpdisc );
+    float V_Stat, H_Stat, P_Stat, Q_Stat;
+    float VH_Central_Value, VH_Neighbour_Value, PQ_Central_Value, PQ_Neighbour_Value;
+    float ( *VH_Dir ), ( *VH_Disc ), ( *PQ_Dir ), ( *PQ_Disc );
 
     //Low pass filter
     float ( *lpf );
@@ -33,50 +32,50 @@ void CLASS rcd_demosaicing_171117()
     * STEP 1: Find cardinal and diagonal interpolation directions
     */
 
-    vhdir = ( float ( * ) ) calloc( width * height, sizeof *vhdir ); merror ( vhdir, "rcd_demosaicing_171117()" );
-    mpdir = ( float ( * ) ) calloc( width * height, sizeof *mpdir ); merror ( mpdir, "rcd_demosaicing_171117()" );
+    VH_Dir = ( float ( * ) ) calloc( width * height, sizeof *VH_Dir ); merror ( VH_Dir, "rcd_demosaicing_171117()" );
+    PQ_Dir = ( float ( * ) ) calloc( width * height, sizeof *PQ_Dir ); merror ( PQ_Dir, "rcd_demosaicing_171117()" );
 
     for ( row = 4; row < height - 4; row++ ) {
         for ( col = 4, indx = row * width + col; col < width - 4; col++, indx++ ) {
 
             //Calculate h/v local discrimination
-            vstat = epssq - 18.0f  *  cfa[indx] * cfa[indx - w1] - 18.0f * cfa[indx] * cfa[indx + w1] - 36.0f * cfa[indx] * cfa[indx - w2] - 36.0f * cfa[indx] * cfa[indx + w2] + 18.0f * cfa[indx] * cfa[indx - w3] + 18.0f * cfa[indx] * cfa[indx + w3] - 2.0f * cfa[indx] * cfa[indx - w4] - 2.0f * cfa[indx] * cfa[indx + w4] + 38.0f * cfa[indx] * cfa[indx] - 70.0f * cfa[indx - w1] * cfa[indx + w1] - 12.0f * cfa[indx - w1] * cfa[indx - w2] + 24.0f * cfa[indx - w1] * cfa[indx + w2] - 38.0f * cfa[indx - w1] * cfa[indx - w3] + 16.0f * cfa[indx - w1] * cfa[indx + w3] + 12.0f * cfa[indx - w1] * cfa[indx - w4] - 6.0f * cfa[indx - w1] * cfa[indx + w4] + 46.0f * cfa[indx - w1] * cfa[indx - w1] + 24.0f * cfa[indx + w1] * cfa[indx - w2] - 12.0f * cfa[indx + w1] * cfa[indx + w2] + 16.0f * cfa[indx + w1] * cfa[indx - w3] - 38.0f * cfa[indx + w1] * cfa[indx + w3] - 6.0f * cfa[indx + w1] * cfa[indx - w4] + 12.0f * cfa[indx + w1] * cfa[indx + w4] + 46.0f * cfa[indx + w1] * cfa[indx + w1] + 14.0f * cfa[indx - w2] * cfa[indx + w2] - 12.0f * cfa[indx - w2] * cfa[indx + w3] - 2.0f * cfa[indx - w2] * cfa[indx - w4] + 2.0f * cfa[indx - w2] * cfa[indx + w4] + 11.0f * cfa[indx - w2] * cfa[indx - w2] - 12.0f * cfa[indx + w2] * cfa[indx - w3] + 2.0f * cfa[indx + w2] * cfa[indx - w4] - 2.0f * cfa[indx + w2] * cfa[indx + w4] + 11.0f * cfa[indx + w2] * cfa[indx + w2] + 2.0f * cfa[indx - w3] * cfa[indx + w3] - 6.0f * cfa[indx - w3] * cfa[indx - w4] + 10.0f * cfa[indx - w3] * cfa[indx - w3] - 6.0f * cfa[indx + w3] * cfa[indx + w4] + 10.0f * cfa[indx + w3] * cfa[indx + w3] + 1.0f * cfa[indx - w4] * cfa[indx - w4] + 1.0f * cfa[indx + w4] * cfa[indx + w4];
-            hstat = epssq - 18.0f  *  cfa[indx] * cfa[indx -  1] - 18.0f * cfa[indx] * cfa[indx +  1] - 36.0f * cfa[indx] * cfa[indx -  2] - 36.0f * cfa[indx] * cfa[indx +  2] + 18.0f * cfa[indx] * cfa[indx -  3] + 18.0f * cfa[indx] * cfa[indx +  3] - 2.0f * cfa[indx] * cfa[indx -  4] - 2.0f * cfa[indx] * cfa[indx +  4] + 38.0f * cfa[indx] * cfa[indx] - 70.0f * cfa[indx -  1] * cfa[indx +  1] - 12.0f * cfa[indx -  1] * cfa[indx -  2] + 24.0f * cfa[indx -  1] * cfa[indx +  2] - 38.0f * cfa[indx -  1] * cfa[indx -  3] + 16.0f * cfa[indx -  1] * cfa[indx +  3] + 12.0f * cfa[indx -  1] * cfa[indx -  4] - 6.0f * cfa[indx -  1] * cfa[indx +  4] + 46.0f * cfa[indx -  1] * cfa[indx -  1] + 24.0f * cfa[indx +  1] * cfa[indx -  2] - 12.0f * cfa[indx +  1] * cfa[indx +  2] + 16.0f * cfa[indx +  1] * cfa[indx -  3] - 38.0f * cfa[indx +  1] * cfa[indx +  3] - 6.0f * cfa[indx +  1] * cfa[indx -  4] + 12.0f * cfa[indx +  1] * cfa[indx +  4] + 46.0f * cfa[indx +  1] * cfa[indx +  1] + 14.0f * cfa[indx -  2] * cfa[indx +  2] - 12.0f * cfa[indx -  2] * cfa[indx +  3] - 2.0f * cfa[indx -  2] * cfa[indx -  4] + 2.0f * cfa[indx -  2] * cfa[indx +  4] + 11.0f * cfa[indx -  2] * cfa[indx -  2] - 12.0f * cfa[indx +  2] * cfa[indx -  3] + 2.0f * cfa[indx +  2] * cfa[indx -  4] - 2.0f * cfa[indx +  2] * cfa[indx +  4] + 11.0f * cfa[indx +  2] * cfa[indx +  2] + 2.0f * cfa[indx -  3] * cfa[indx +  3] - 6.0f * cfa[indx -  3] * cfa[indx -  4] + 10.0f * cfa[indx -  3] * cfa[indx -  3] - 6.0f * cfa[indx +  3] * cfa[indx +  4] + 10.0f * cfa[indx +  3] * cfa[indx +  3] + 1.0f * cfa[indx -  4] * cfa[indx -  4] + 1.0f * cfa[indx +  4] * cfa[indx +  4];
+            V_Stat = epssq - 18.0f  *  cfa[indx] * cfa[indx - w1] - 18.0f * cfa[indx] * cfa[indx + w1] - 36.0f * cfa[indx] * cfa[indx - w2] - 36.0f * cfa[indx] * cfa[indx + w2] + 18.0f * cfa[indx] * cfa[indx - w3] + 18.0f * cfa[indx] * cfa[indx + w3] - 2.0f * cfa[indx] * cfa[indx - w4] - 2.0f * cfa[indx] * cfa[indx + w4] + 38.0f * cfa[indx] * cfa[indx] - 70.0f * cfa[indx - w1] * cfa[indx + w1] - 12.0f * cfa[indx - w1] * cfa[indx - w2] + 24.0f * cfa[indx - w1] * cfa[indx + w2] - 38.0f * cfa[indx - w1] * cfa[indx - w3] + 16.0f * cfa[indx - w1] * cfa[indx + w3] + 12.0f * cfa[indx - w1] * cfa[indx - w4] - 6.0f * cfa[indx - w1] * cfa[indx + w4] + 46.0f * cfa[indx - w1] * cfa[indx - w1] + 24.0f * cfa[indx + w1] * cfa[indx - w2] - 12.0f * cfa[indx + w1] * cfa[indx + w2] + 16.0f * cfa[indx + w1] * cfa[indx - w3] - 38.0f * cfa[indx + w1] * cfa[indx + w3] - 6.0f * cfa[indx + w1] * cfa[indx - w4] + 12.0f * cfa[indx + w1] * cfa[indx + w4] + 46.0f * cfa[indx + w1] * cfa[indx + w1] + 14.0f * cfa[indx - w2] * cfa[indx + w2] - 12.0f * cfa[indx - w2] * cfa[indx + w3] - 2.0f * cfa[indx - w2] * cfa[indx - w4] + 2.0f * cfa[indx - w2] * cfa[indx + w4] + 11.0f * cfa[indx - w2] * cfa[indx - w2] - 12.0f * cfa[indx + w2] * cfa[indx - w3] + 2.0f * cfa[indx + w2] * cfa[indx - w4] - 2.0f * cfa[indx + w2] * cfa[indx + w4] + 11.0f * cfa[indx + w2] * cfa[indx + w2] + 2.0f * cfa[indx - w3] * cfa[indx + w3] - 6.0f * cfa[indx - w3] * cfa[indx - w4] + 10.0f * cfa[indx - w3] * cfa[indx - w3] - 6.0f * cfa[indx + w3] * cfa[indx + w4] + 10.0f * cfa[indx + w3] * cfa[indx + w3] + 1.0f * cfa[indx - w4] * cfa[indx - w4] + 1.0f * cfa[indx + w4] * cfa[indx + w4];
+            H_Stat = epssq - 18.0f  *  cfa[indx] * cfa[indx -  1] - 18.0f * cfa[indx] * cfa[indx +  1] - 36.0f * cfa[indx] * cfa[indx -  2] - 36.0f * cfa[indx] * cfa[indx +  2] + 18.0f * cfa[indx] * cfa[indx -  3] + 18.0f * cfa[indx] * cfa[indx +  3] - 2.0f * cfa[indx] * cfa[indx -  4] - 2.0f * cfa[indx] * cfa[indx +  4] + 38.0f * cfa[indx] * cfa[indx] - 70.0f * cfa[indx -  1] * cfa[indx +  1] - 12.0f * cfa[indx -  1] * cfa[indx -  2] + 24.0f * cfa[indx -  1] * cfa[indx +  2] - 38.0f * cfa[indx -  1] * cfa[indx -  3] + 16.0f * cfa[indx -  1] * cfa[indx +  3] + 12.0f * cfa[indx -  1] * cfa[indx -  4] - 6.0f * cfa[indx -  1] * cfa[indx +  4] + 46.0f * cfa[indx -  1] * cfa[indx -  1] + 24.0f * cfa[indx +  1] * cfa[indx -  2] - 12.0f * cfa[indx +  1] * cfa[indx +  2] + 16.0f * cfa[indx +  1] * cfa[indx -  3] - 38.0f * cfa[indx +  1] * cfa[indx +  3] - 6.0f * cfa[indx +  1] * cfa[indx -  4] + 12.0f * cfa[indx +  1] * cfa[indx +  4] + 46.0f * cfa[indx +  1] * cfa[indx +  1] + 14.0f * cfa[indx -  2] * cfa[indx +  2] - 12.0f * cfa[indx -  2] * cfa[indx +  3] - 2.0f * cfa[indx -  2] * cfa[indx -  4] + 2.0f * cfa[indx -  2] * cfa[indx +  4] + 11.0f * cfa[indx -  2] * cfa[indx -  2] - 12.0f * cfa[indx +  2] * cfa[indx -  3] + 2.0f * cfa[indx +  2] * cfa[indx -  4] - 2.0f * cfa[indx +  2] * cfa[indx +  4] + 11.0f * cfa[indx +  2] * cfa[indx +  2] + 2.0f * cfa[indx -  3] * cfa[indx +  3] - 6.0f * cfa[indx -  3] * cfa[indx -  4] + 10.0f * cfa[indx -  3] * cfa[indx -  3] - 6.0f * cfa[indx +  3] * cfa[indx +  4] + 10.0f * cfa[indx +  3] * cfa[indx +  3] + 1.0f * cfa[indx -  4] * cfa[indx -  4] + 1.0f * cfa[indx +  4] * cfa[indx +  4];
 
-            vhdir[indx] = vstat / (vstat + hstat);
+            VH_Dir[indx] = V_Stat / (V_Stat + H_Stat);
 
             //Calculate m/p local discrimination
-            mstat = epssq - 18.0f * cfa[indx] * cfa[indx - w1 - 1] - 18.0f * cfa[indx] * cfa[indx + w1 + 1] - 36.0f * cfa[indx] * cfa[indx - w2 - 2] - 36.0f * cfa[indx] * cfa[indx + w2 + 2] + 18.0f * cfa[indx] * cfa[indx - w3 - 3] + 18.0f * cfa[indx] * cfa[indx + w3 + 3] - 2.0f * cfa[indx] * cfa[indx - w4 - 4] - 2.0f * cfa[indx] * cfa[indx + w4 + 4] + 38.0f * cfa[indx] * cfa[indx] - 70.0f * cfa[indx - w1 - 1] * cfa[indx + w1 + 1] - 12.0f * cfa[indx - w1 - 1] * cfa[indx - w2 - 2] + 24.0f * cfa[indx - w1 - 1] * cfa[indx + w2 + 2] - 38.0f * cfa[indx - w1 - 1] * cfa[indx - w3 - 3] + 16.0f * cfa[indx - w1 - 1] * cfa[indx + w3 + 3] + 12.0f * cfa[indx - w1 - 1] * cfa[indx - w4 - 4] - 6.0f * cfa[indx - w1 - 1] * cfa[indx + w4 + 4] + 46.0f * cfa[indx - w1 - 1] * cfa[indx - w1 - 1] + 24.0f * cfa[indx + w1 + 1] * cfa[indx - w2 - 2] - 12.0f * cfa[indx + w1 + 1] * cfa[indx + w2 + 2] + 16.0f * cfa[indx + w1 + 1] * cfa[indx - w3 - 3] - 38.0f * cfa[indx + w1 + 1] * cfa[indx + w3 + 3] - 6.0f * cfa[indx + w1 + 1] * cfa[indx - w4 - 4] + 12.0f * cfa[indx + w1 + 1] * cfa[indx + w4 + 4] + 46.0f * cfa[indx + w1 + 1] * cfa[indx + w1 + 1] + 14.0f * cfa[indx - w2 - 2] * cfa[indx + w2 + 2] - 12.0f * cfa[indx - w2 - 2] * cfa[indx + w3 + 3] - 2.0f * cfa[indx - w2 - 2] * cfa[indx - w4 - 4] + 2.0f * cfa[indx - w2 - 2] * cfa[indx + w4 + 4] + 11.0f * cfa[indx - w2 - 2] * cfa[indx - w2 - 2] - 12.0f * cfa[indx + w2 + 2] * cfa[indx - w3 - 3] + 2 * cfa[indx + w2 + 2] * cfa[indx - w4 - 4] - 2.0f * cfa[indx + w2 + 2] * cfa[indx + w4 + 4] + 11.0f * cfa[indx + w2 + 2] * cfa[indx + w2 + 2] + 2.0f * cfa[indx - w3 - 3] * cfa[indx + w3 + 3] - 6.0f * cfa[indx - w3 - 3] * cfa[indx - w4 - 4] + 10.0f * cfa[indx - w3 - 3] * cfa[indx - w3 - 3] - 6.0f * cfa[indx + w3 + 3] * cfa[indx + w4 + 4] + 10.0f * cfa[indx + w3 + 3] * cfa[indx + w3 + 3] + 1.0f * cfa[indx - w4 - 4] * cfa[indx - w4 - 4] + 1.0f * cfa[indx + w4 + 4] * cfa[indx + w4 + 4];
-            pstat = epssq - 18.0f * cfa[indx] * cfa[indx + w1 - 1] - 18.0f * cfa[indx] * cfa[indx - w1 + 1] - 36.0f * cfa[indx] * cfa[indx + w2 - 2] - 36.0f * cfa[indx] * cfa[indx - w2 + 2] + 18.0f * cfa[indx] * cfa[indx + w3 - 3] + 18.0f * cfa[indx] * cfa[indx - w3 + 3] - 2.0f * cfa[indx] * cfa[indx + w4 - 4] - 2.0f * cfa[indx] * cfa[indx - w4 + 4] + 38.0f * cfa[indx] * cfa[indx] - 70.0f * cfa[indx + w1 - 1] * cfa[indx - w1 + 1] - 12.0f * cfa[indx + w1 - 1] * cfa[indx + w2 - 2] + 24.0f * cfa[indx + w1 - 1] * cfa[indx - w2 + 2] - 38.0f * cfa[indx + w1 - 1] * cfa[indx + w3 - 3] + 16.0f * cfa[indx + w1 - 1] * cfa[indx - w3 + 3] + 12.0f * cfa[indx + w1 - 1] * cfa[indx + w4 - 4] - 6.0f * cfa[indx + w1 - 1] * cfa[indx - w4 + 4] + 46.0f * cfa[indx + w1 - 1] * cfa[indx + w1 - 1] + 24.0f * cfa[indx - w1 + 1] * cfa[indx + w2 - 2] - 12.0f * cfa[indx - w1 + 1] * cfa[indx - w2 + 2] + 16.0f * cfa[indx - w1 + 1] * cfa[indx + w3 - 3] - 38.0f * cfa[indx - w1 + 1] * cfa[indx - w3 + 3] - 6.0f * cfa[indx - w1 + 1] * cfa[indx + w4 - 4] + 12.0f * cfa[indx - w1 + 1] * cfa[indx - w4 + 4] + 46.0f * cfa[indx - w1 + 1] * cfa[indx - w1 + 1] + 14.0f * cfa[indx + w2 - 2] * cfa[indx - w2 + 2] - 12.0f * cfa[indx + w2 - 2] * cfa[indx - w3 + 3] - 2.0f * cfa[indx + w2 - 2] * cfa[indx + w4 - 4] + 2.0f * cfa[indx + w2 - 2] * cfa[indx - w4 + 4] + 11.0f * cfa[indx + w2 - 2] * cfa[indx + w2 - 2] - 12.0f * cfa[indx - w2 + 2] * cfa[indx + w3 - 3] + 2 * cfa[indx - w2 + 2] * cfa[indx + w4 - 4] - 2.0f * cfa[indx - w2 + 2] * cfa[indx - w4 + 4] + 11.0f * cfa[indx - w2 + 2] * cfa[indx - w2 + 2] + 2.0f * cfa[indx + w3 - 3] * cfa[indx - w3 + 3] - 6.0f * cfa[indx + w3 - 3] * cfa[indx + w4 - 4] + 10.0f * cfa[indx + w3 - 3] * cfa[indx + w3 - 3] - 6.0f * cfa[indx - w3 + 3] * cfa[indx - w4 + 4] + 10.0f * cfa[indx - w3 + 3] * cfa[indx - w3 + 3] + 1.0f * cfa[indx + w4 - 4] * cfa[indx + w4 - 4] + 1.0f * cfa[indx - w4 + 4] * cfa[indx - w4 + 4];
+            P_Stat = epssq - 18.0f * cfa[indx] * cfa[indx - w1 - 1] - 18.0f * cfa[indx] * cfa[indx + w1 + 1] - 36.0f * cfa[indx] * cfa[indx - w2 - 2] - 36.0f * cfa[indx] * cfa[indx + w2 + 2] + 18.0f * cfa[indx] * cfa[indx - w3 - 3] + 18.0f * cfa[indx] * cfa[indx + w3 + 3] - 2.0f * cfa[indx] * cfa[indx - w4 - 4] - 2.0f * cfa[indx] * cfa[indx + w4 + 4] + 38.0f * cfa[indx] * cfa[indx] - 70.0f * cfa[indx - w1 - 1] * cfa[indx + w1 + 1] - 12.0f * cfa[indx - w1 - 1] * cfa[indx - w2 - 2] + 24.0f * cfa[indx - w1 - 1] * cfa[indx + w2 + 2] - 38.0f * cfa[indx - w1 - 1] * cfa[indx - w3 - 3] + 16.0f * cfa[indx - w1 - 1] * cfa[indx + w3 + 3] + 12.0f * cfa[indx - w1 - 1] * cfa[indx - w4 - 4] - 6.0f * cfa[indx - w1 - 1] * cfa[indx + w4 + 4] + 46.0f * cfa[indx - w1 - 1] * cfa[indx - w1 - 1] + 24.0f * cfa[indx + w1 + 1] * cfa[indx - w2 - 2] - 12.0f * cfa[indx + w1 + 1] * cfa[indx + w2 + 2] + 16.0f * cfa[indx + w1 + 1] * cfa[indx - w3 - 3] - 38.0f * cfa[indx + w1 + 1] * cfa[indx + w3 + 3] - 6.0f * cfa[indx + w1 + 1] * cfa[indx - w4 - 4] + 12.0f * cfa[indx + w1 + 1] * cfa[indx + w4 + 4] + 46.0f * cfa[indx + w1 + 1] * cfa[indx + w1 + 1] + 14.0f * cfa[indx - w2 - 2] * cfa[indx + w2 + 2] - 12.0f * cfa[indx - w2 - 2] * cfa[indx + w3 + 3] - 2.0f * cfa[indx - w2 - 2] * cfa[indx - w4 - 4] + 2.0f * cfa[indx - w2 - 2] * cfa[indx + w4 + 4] + 11.0f * cfa[indx - w2 - 2] * cfa[indx - w2 - 2] - 12.0f * cfa[indx + w2 + 2] * cfa[indx - w3 - 3] + 2 * cfa[indx + w2 + 2] * cfa[indx - w4 - 4] - 2.0f * cfa[indx + w2 + 2] * cfa[indx + w4 + 4] + 11.0f * cfa[indx + w2 + 2] * cfa[indx + w2 + 2] + 2.0f * cfa[indx - w3 - 3] * cfa[indx + w3 + 3] - 6.0f * cfa[indx - w3 - 3] * cfa[indx - w4 - 4] + 10.0f * cfa[indx - w3 - 3] * cfa[indx - w3 - 3] - 6.0f * cfa[indx + w3 + 3] * cfa[indx + w4 + 4] + 10.0f * cfa[indx + w3 + 3] * cfa[indx + w3 + 3] + 1.0f * cfa[indx - w4 - 4] * cfa[indx - w4 - 4] + 1.0f * cfa[indx + w4 + 4] * cfa[indx + w4 + 4];
+            Q_Stat = epssq - 18.0f * cfa[indx] * cfa[indx + w1 - 1] - 18.0f * cfa[indx] * cfa[indx - w1 + 1] - 36.0f * cfa[indx] * cfa[indx + w2 - 2] - 36.0f * cfa[indx] * cfa[indx - w2 + 2] + 18.0f * cfa[indx] * cfa[indx + w3 - 3] + 18.0f * cfa[indx] * cfa[indx - w3 + 3] - 2.0f * cfa[indx] * cfa[indx + w4 - 4] - 2.0f * cfa[indx] * cfa[indx - w4 + 4] + 38.0f * cfa[indx] * cfa[indx] - 70.0f * cfa[indx + w1 - 1] * cfa[indx - w1 + 1] - 12.0f * cfa[indx + w1 - 1] * cfa[indx + w2 - 2] + 24.0f * cfa[indx + w1 - 1] * cfa[indx - w2 + 2] - 38.0f * cfa[indx + w1 - 1] * cfa[indx + w3 - 3] + 16.0f * cfa[indx + w1 - 1] * cfa[indx - w3 + 3] + 12.0f * cfa[indx + w1 - 1] * cfa[indx + w4 - 4] - 6.0f * cfa[indx + w1 - 1] * cfa[indx - w4 + 4] + 46.0f * cfa[indx + w1 - 1] * cfa[indx + w1 - 1] + 24.0f * cfa[indx - w1 + 1] * cfa[indx + w2 - 2] - 12.0f * cfa[indx - w1 + 1] * cfa[indx - w2 + 2] + 16.0f * cfa[indx - w1 + 1] * cfa[indx + w3 - 3] - 38.0f * cfa[indx - w1 + 1] * cfa[indx - w3 + 3] - 6.0f * cfa[indx - w1 + 1] * cfa[indx + w4 - 4] + 12.0f * cfa[indx - w1 + 1] * cfa[indx - w4 + 4] + 46.0f * cfa[indx - w1 + 1] * cfa[indx - w1 + 1] + 14.0f * cfa[indx + w2 - 2] * cfa[indx - w2 + 2] - 12.0f * cfa[indx + w2 - 2] * cfa[indx - w3 + 3] - 2.0f * cfa[indx + w2 - 2] * cfa[indx + w4 - 4] + 2.0f * cfa[indx + w2 - 2] * cfa[indx - w4 + 4] + 11.0f * cfa[indx + w2 - 2] * cfa[indx + w2 - 2] - 12.0f * cfa[indx - w2 + 2] * cfa[indx + w3 - 3] + 2 * cfa[indx - w2 + 2] * cfa[indx + w4 - 4] - 2.0f * cfa[indx - w2 + 2] * cfa[indx - w4 + 4] + 11.0f * cfa[indx - w2 + 2] * cfa[indx - w2 + 2] + 2.0f * cfa[indx + w3 - 3] * cfa[indx - w3 + 3] - 6.0f * cfa[indx + w3 - 3] * cfa[indx + w4 - 4] + 10.0f * cfa[indx + w3 - 3] * cfa[indx + w3 - 3] - 6.0f * cfa[indx - w3 + 3] * cfa[indx - w4 + 4] + 10.0f * cfa[indx - w3 + 3] * cfa[indx - w3 + 3] + 1.0f * cfa[indx + w4 - 4] * cfa[indx + w4 - 4] + 1.0f * cfa[indx - w4 + 4] * cfa[indx - w4 + 4];
 
-            mpdir[indx] = mstat / ( mstat + pstat );
+            PQ_Dir[indx] = P_Stat / ( P_Stat + Q_Stat );
 
         }
     }
 
-    vhdisc = ( float ( * ) ) calloc( width * height, sizeof *vhdisc ); merror ( vhdisc, "rcd_demosaicing_171117()" );
-    mpdisc = ( float ( * ) ) calloc( width * height, sizeof *mpdisc ); merror ( mpdisc, "rcd_demosaicing_171117()" );
+    VH_Disc = ( float ( * ) ) calloc( width * height, sizeof *VH_Disc ); merror ( VH_Disc, "rcd_demosaicing_171117()" );
+    PQ_Disc = ( float ( * ) ) calloc( width * height, sizeof *PQ_Disc ); merror ( PQ_Disc, "rcd_demosaicing_171117()" );
 
     for ( row = 4; row < height - 4; row++ ) {
         for ( col = 4, indx = row * width + col; col < width - 4; col++, indx++ ) {
 
             //Refined h/v local discrimination
-            vh_central_value   = vhdir[indx];
-            vh_neighbour_value = 0.25f * (vhdir[indx - w1 - 1] + vhdir[indx - w1 + 1] + vhdir[indx + w1 - 1] + vhdir[indx + w1 + 1]);
+            VH_Central_Value   = VH_Dir[indx];
+            VH_Neighbour_Value = 0.25f * (VH_Dir[indx - w1 - 1] + VH_Dir[indx - w1 + 1] + VH_Dir[indx + w1 - 1] + VH_Dir[indx + w1 + 1]);
 
-            vhdisc[indx] = ( fabs( 0.5f - vh_central_value ) < fabs( 0.5f - vh_neighbour_value ) ) ? vh_neighbour_value : vh_central_value;
+            VH_Disc[indx] = ( fabs( 0.5f - VH_Central_Value ) < fabs( 0.5f - VH_Neighbour_Value ) ) ? VH_Neighbour_Value : VH_Central_Value;
 
             //Refined m/p local discrimination
-            mp_central_value   = mpdir[indx];
-            mp_neighbour_value = 0.25f * (mpdir[indx - w1 - 1] + mpdir[indx - w1 + 1] + mpdir[indx + w1 - 1] + mpdir[indx + w1 + 1]);
+            PQ_Central_Value   = PQ_Dir[indx];
+            PQ_Neighbour_Value = 0.25f * (PQ_Dir[indx - w1 - 1] + PQ_Dir[indx - w1 + 1] + PQ_Dir[indx + w1 - 1] + PQ_Dir[indx + w1 + 1]);
 
-            mpdisc[indx] = ( fabs( 0.5f - mp_central_value ) < fabs( 0.5f - mp_neighbour_value ) ) ? mp_neighbour_value : mp_central_value;
+            PQ_Disc[indx] = ( fabs( 0.5f - PQ_Central_Value ) < fabs( 0.5f - PQ_Neighbour_Value ) ) ? PQ_Neighbour_Value : PQ_Central_Value;
 
         }
     }
 
-    free( vhdir );
-    free( mpdir );
+    free( VH_Dir );
+    free( PQ_Dir );
 
 
     /**
@@ -103,22 +102,22 @@ void CLASS rcd_demosaicing_171117()
         for ( col = 4 + ( FC( row, 0 )&1 ), indx = row * width + col; col < width - 4; col += 2, indx += 2 ) {
 
             //Cardinal gradients
-            Ngrad = eps + fabs( cfa[indx - w1] - cfa[indx + w1] ) + fabs( cfa[indx] - cfa[indx - w2] ) + fabs( cfa[indx - w1] - cfa[indx - w3] ) + fabs( cfa[indx - w2] - cfa[indx - w4] );
-            Sgrad = eps + fabs( cfa[indx + w1] - cfa[indx - w1] ) + fabs( cfa[indx] - cfa[indx + w2] ) + fabs( cfa[indx + w1] - cfa[indx + w3] ) + fabs( cfa[indx + w2] - cfa[indx + w4] );
-            Wgrad = eps + fabs( cfa[indx -  1] - cfa[indx +  1] ) + fabs( cfa[indx] - cfa[indx -  2] ) + fabs( cfa[indx -  1] - cfa[indx -  3] ) + fabs( cfa[indx -  2] - cfa[indx -  4] );
-            Egrad = eps + fabs( cfa[indx +  1] - cfa[indx -  1] ) + fabs( cfa[indx] - cfa[indx +  2] ) + fabs( cfa[indx +  1] - cfa[indx +  3] ) + fabs( cfa[indx +  2] - cfa[indx +  4] );
+            N_Grad = eps + fabs( cfa[indx - w1] - cfa[indx + w1] ) + fabs( cfa[indx] - cfa[indx - w2] ) + fabs( cfa[indx - w1] - cfa[indx - w3] ) + fabs( cfa[indx - w2] - cfa[indx - w4] );
+            S_Grad = eps + fabs( cfa[indx + w1] - cfa[indx - w1] ) + fabs( cfa[indx] - cfa[indx + w2] ) + fabs( cfa[indx + w1] - cfa[indx + w3] ) + fabs( cfa[indx + w2] - cfa[indx + w4] );
+            W_Grad = eps + fabs( cfa[indx -  1] - cfa[indx +  1] ) + fabs( cfa[indx] - cfa[indx -  2] ) + fabs( cfa[indx -  1] - cfa[indx -  3] ) + fabs( cfa[indx -  2] - cfa[indx -  4] );
+            E_Grad = eps + fabs( cfa[indx +  1] - cfa[indx -  1] ) + fabs( cfa[indx] - cfa[indx +  2] ) + fabs( cfa[indx +  1] - cfa[indx +  3] ) + fabs( cfa[indx +  2] - cfa[indx +  4] );
 
             //Cardinal pixel estimations
-            Nest = cfa[indx - w1] * ( 1.f + ( lpf[indx] - lpf[indx - w2] ) / ( eps + lpf[indx] + lpf[indx - w2] ) );
-            Sest = cfa[indx + w1] * ( 1.f + ( lpf[indx] - lpf[indx + w2] ) / ( eps + lpf[indx] + lpf[indx + w2] ) );
-            West = cfa[indx -  1] * ( 1.f + ( lpf[indx] - lpf[indx -  2] ) / ( eps + lpf[indx] + lpf[indx -  2] ) );
-            Eest = cfa[indx +  1] * ( 1.f + ( lpf[indx] - lpf[indx +  2] ) / ( eps + lpf[indx] + lpf[indx +  2] ) );
+            N_Est = cfa[indx - w1] * ( 1.f + ( lpf[indx] - lpf[indx - w2] ) / ( eps + lpf[indx] + lpf[indx - w2] ) );
+            S_Est = cfa[indx + w1] * ( 1.f + ( lpf[indx] - lpf[indx + w2] ) / ( eps + lpf[indx] + lpf[indx + w2] ) );
+            W_Est = cfa[indx -  1] * ( 1.f + ( lpf[indx] - lpf[indx -  2] ) / ( eps + lpf[indx] + lpf[indx -  2] ) );
+            E_Est = cfa[indx +  1] * ( 1.f + ( lpf[indx] - lpf[indx +  2] ) / ( eps + lpf[indx] + lpf[indx +  2] ) );
 
             //Interpolate G@R & G@B
-            vint = ( Sgrad * Nest + Ngrad * Sest ) / ( Ngrad + Sgrad );
-            hint = ( Wgrad * Eest + Egrad * West ) / ( Egrad + Wgrad );
+            V_Est = ( S_Grad * N_Est + N_Grad * S_Est ) / ( N_Grad + S_Grad );
+            H_Est = ( W_Grad * E_Est + E_Grad * W_Est ) / ( E_Grad + W_Grad );
 
-            rgb[indx][1] = LIM( vhdisc[indx] * hint + ( 1.0f - vhdisc[indx] ) * vint, 0.f, 1.f );
+            rgb[indx][1] = LIM( VH_Disc[indx] * H_Est + ( 1.0f - VH_Disc[indx] ) * V_Est, 0.f, 1.f );
 
         }
     }
@@ -134,22 +133,22 @@ void CLASS rcd_demosaicing_171117()
         for ( col = 4 + ( FC( row, 0 )&1 ), indx = row * width + col, c = 2 - FC( row, col ); col < width - 4; col += 2, indx += 2 ) {
 
             //Diagonal gradients
-            NWgrad = eps + fabs( rgb[indx - w1 - 1][c] - rgb[indx + w1 + 1][c] ) + fabs( rgb[indx - w1 - 1][c] - rgb[indx - w3 - 3][c] ) + fabs( rgb[indx][1] - rgb[indx - w2 - 2][1] );
-            NEgrad = eps + fabs( rgb[indx - w1 + 1][c] - rgb[indx + w1 - 1][c] ) + fabs( rgb[indx - w1 + 1][c] - rgb[indx - w3 + 3][c] ) + fabs( rgb[indx][1] - rgb[indx - w2 + 2][1] );
-            SWgrad = eps + fabs( rgb[indx + w1 - 1][c] - rgb[indx - w1 + 1][c] ) + fabs( rgb[indx + w1 - 1][c] - rgb[indx + w3 - 3][c] ) + fabs( rgb[indx][1] - rgb[indx + w2 - 2][1] );
-            SEgrad = eps + fabs( rgb[indx + w1 + 1][c] - rgb[indx - w1 - 1][c] ) + fabs( rgb[indx + w1 + 1][c] - rgb[indx + w3 + 3][c] ) + fabs( rgb[indx][1] - rgb[indx + w2 + 2][1] );
+            NW_Grad = eps + fabs( rgb[indx - w1 - 1][c] - rgb[indx + w1 + 1][c] ) + fabs( rgb[indx - w1 - 1][c] - rgb[indx - w3 - 3][c] ) + fabs( rgb[indx][1] - rgb[indx - w2 - 2][1] );
+            NE_Grad = eps + fabs( rgb[indx - w1 + 1][c] - rgb[indx + w1 - 1][c] ) + fabs( rgb[indx - w1 + 1][c] - rgb[indx - w3 + 3][c] ) + fabs( rgb[indx][1] - rgb[indx - w2 + 2][1] );
+            SW_Grad = eps + fabs( rgb[indx + w1 - 1][c] - rgb[indx - w1 + 1][c] ) + fabs( rgb[indx + w1 - 1][c] - rgb[indx + w3 - 3][c] ) + fabs( rgb[indx][1] - rgb[indx + w2 - 2][1] );
+            SE_Grad = eps + fabs( rgb[indx + w1 + 1][c] - rgb[indx - w1 - 1][c] ) + fabs( rgb[indx + w1 + 1][c] - rgb[indx + w3 + 3][c] ) + fabs( rgb[indx][1] - rgb[indx + w2 + 2][1] );
 
             //Diagonal colour differences
-            NWest = rgb[indx - w1 - 1][c] - rgb[indx - w1 - 1][1];
-            NEest = rgb[indx - w1 + 1][c] - rgb[indx - w1 + 1][1];
-            SWest = rgb[indx + w1 - 1][c] - rgb[indx + w1 - 1][1];
-            SEest = rgb[indx + w1 + 1][c] - rgb[indx + w1 + 1][1];
+            NW_Est = rgb[indx - w1 - 1][c] - rgb[indx - w1 - 1][1];
+            NE_Est = rgb[indx - w1 + 1][c] - rgb[indx - w1 + 1][1];
+            SW_Est = rgb[indx + w1 - 1][c] - rgb[indx + w1 - 1][1];
+            SE_Est = rgb[indx + w1 + 1][c] - rgb[indx + w1 + 1][1];
 
             //Interpolate R@B and B@R
-            pint = ( NWgrad * SEest + SEgrad * NWest ) / ( NWgrad + SEgrad );
-            qint = ( NEgrad * SWest + SWgrad * NEest ) / ( NEgrad + SWgrad );
+            P_Est = ( NW_Grad * SE_Est + SE_Grad * NW_Est ) / ( NW_Grad + SE_Grad );
+            Q_Est = ( NE_Grad * SW_Est + SW_Grad * NE_Est ) / ( NE_Grad + SW_Grad );
 
-            rgb[indx][c] = LIM( rgb[indx][1] + ( 1.0f - mpdisc[indx] ) * pint + mpdisc[indx] * qint, 0.f, 1.f );
+            rgb[indx][c] = LIM( rgb[indx][1] + ( 1.0f - PQ_Disc[indx] ) * P_Est + PQ_Disc[indx] * Q_Est, 0.f, 1.f );
 
         }
     }
@@ -160,28 +159,28 @@ void CLASS rcd_demosaicing_171117()
             for ( c = 0; c <= 2; c += 2 ) {
 
                 //Cardinal gradients
-                Ngrad = eps + fabs( rgb[indx][1] - rgb[indx - w2][1] ) + fabs( rgb[indx - w1][c] - rgb[indx + w1][c] ) + fabs( rgb[indx - w1][c] - rgb[indx - w3][c] );
-                Sgrad = eps + fabs( rgb[indx][1] - rgb[indx + w2][1] ) + fabs( rgb[indx + w1][c] - rgb[indx - w1][c] ) + fabs( rgb[indx + w1][c] - rgb[indx + w3][c] );
-                Wgrad = eps + fabs( rgb[indx][1] - rgb[indx -  2][1] ) + fabs( rgb[indx -  1][c] - rgb[indx +  1][c] ) + fabs( rgb[indx -  1][c] - rgb[indx -  3][c] );
-                Egrad = eps + fabs( rgb[indx][1] - rgb[indx +  2][1] ) + fabs( rgb[indx +  1][c] - rgb[indx -  1][c] ) + fabs( rgb[indx +  1][c] - rgb[indx +  3][c] );
+                N_Grad = eps + fabs( rgb[indx][1] - rgb[indx - w2][1] ) + fabs( rgb[indx - w1][c] - rgb[indx + w1][c] ) + fabs( rgb[indx - w1][c] - rgb[indx - w3][c] );
+                S_Grad = eps + fabs( rgb[indx][1] - rgb[indx + w2][1] ) + fabs( rgb[indx + w1][c] - rgb[indx - w1][c] ) + fabs( rgb[indx + w1][c] - rgb[indx + w3][c] );
+                W_Grad = eps + fabs( rgb[indx][1] - rgb[indx -  2][1] ) + fabs( rgb[indx -  1][c] - rgb[indx +  1][c] ) + fabs( rgb[indx -  1][c] - rgb[indx -  3][c] );
+                E_Grad = eps + fabs( rgb[indx][1] - rgb[indx +  2][1] ) + fabs( rgb[indx +  1][c] - rgb[indx -  1][c] ) + fabs( rgb[indx +  1][c] - rgb[indx +  3][c] );
 
                 //Cardinal colour differences
-                Nest = rgb[indx - w1][c] - rgb[indx - w1][1];
-                Sest = rgb[indx + w1][c] - rgb[indx + w1][1];
-                West = rgb[indx -  1][c] - rgb[indx -  1][1];
-                Eest = rgb[indx +  1][c] - rgb[indx +  1][1];
+                N_Est = rgb[indx - w1][c] - rgb[indx - w1][1];
+                S_Est = rgb[indx + w1][c] - rgb[indx + w1][1];
+                W_Est = rgb[indx -  1][c] - rgb[indx -  1][1];
+                E_Est = rgb[indx +  1][c] - rgb[indx +  1][1];
 
                 //Interpolate R@G and B@G
-                vint = ( Ngrad * Sest + Sgrad * Nest ) / ( Ngrad + Sgrad );
-                hint = ( Egrad * West + Wgrad * Eest ) / ( Egrad + Wgrad );
+                V_Est = ( N_Grad * S_Est + S_Grad * N_Est ) / ( N_Grad + S_Grad );
+                H_Est = ( E_Grad * W_Est + W_Grad * E_Est ) / ( E_Grad + W_Grad );
 
-                rgb[indx][c] = LIM( rgb[indx][1] + ( 1.0f - vhdisc[indx] ) * vint + vhdisc[indx] * hint, 0.f, 1.f );
+                rgb[indx][c] = LIM( rgb[indx][1] + ( 1.0f - VH_Disc[indx] ) * V_Est + VH_Disc[indx] * H_Est, 0.f, 1.f );
 
             }
         }
     }
 
-    free( mpdisc );
-    free( vhdisc );
+    free( PQ_Disc );
+    free( VH_Disc );
 
 }
