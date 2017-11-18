@@ -10,7 +10,7 @@ The Ratio Corrected Demosaicing algorithm intends to smooth the colour correctio
 The algorithm comprises four parts:
 
 ### 1. Local directional discrimination
-The algorithm calculates the relative 1D local gradients directly on the Bayer data for the horizonal, vertical, diagonal P and diagonal Q directions.
+The algorithm calculates the relative 1D local gradients directly on the Bayer data for the horizonal, vertical, diagonal M and diagonal P directions.
 
 It then refines the calculation trying to infere more discriminational strength from the neighbourhood wherever possible.
 
