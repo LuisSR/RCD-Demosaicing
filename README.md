@@ -10,7 +10,7 @@ The Ratio Corrected Demosaicing algorithm intends to smooth the colour correctio
 The algorithm comprises four parts:
 
 ### 1. Local directional discrimination
-The algorithm calculates the relative 1D local gradients directly on the Bayer data for the horizonal, vertical, diagonal M and diagonal P directions.
+The algorithm calculates the relative 1D local gradients directly on the Bayer data for the horizonal, vertical, diagonal P and diagonal Q directions.
 
 It then refines the calculation trying to infere more discriminational strength from the neighbourhood wherever possible.
 
@@ -28,12 +28,12 @@ Using the data from the steps #1 and #2, the green channel is updated using a pi
 
 Example for the East pixel value estimation:
 
-    Hamilton-Adams  => Gest(0) = G(1) + ( R(0) - R(2) ) / 2
-    Ratio-corrected => Gest(0) = G(1) * ( 1 + ( R(0) - R(2) ) / ( R(0) + R(2) ) )
+    Hamilton-Adams  => GE_Est(0) = G(1) + ( R(0) - R(2) ) / 2
+    Ratio-corrected => GE_Est(0) = G(1) * ( 1 + ( R(0) - R(2) ) / ( R(0) + R(2) ) )
 
 To further smooth the output, the low-pass filter from step #2 is introduced in the formula:
 
-    Ratio-corrected LPF => Gest(0) = G(1) * ( 1 + ( LPF(0) - LPF(2) ) / ( LPF(0) + LPF(2) ) )
+    Ratio-corrected LPF => GE_Est(0) = G(1) * ( 1 + ( LPF(0) - LPF(2) ) / ( LPF(0) + LPF(2) ) )
 
 ### 4. Red and Blue channels interpolation
 The routine used for interpolating the chrominance is fairly simple yet surprisingly effective. Using the full green channel from step #3, the red and blue channels are updated with the local colour differences.
