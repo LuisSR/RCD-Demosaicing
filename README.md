@@ -42,7 +42,13 @@ The gradients are empirically optimized.
 
 ## Usage
 
-The algorithm can be plugged to dcraw. It expects two buffers to be declared prior to its include command:
+I provide binary files built in Visual Studio C++ 2015 under Windows 8.1 and GCC under Lubuntu 16.04.
+
+To run RCD, use the flag "-q 4". Command example:
+
+    dcraw -v -T -6 -H 0 -W -o 1 -w -q 4 file.raw
+
+The algorithm can be compiled manually. To be pluggable to dcraw, it expects two buffers to be declared prior to the first step:
 
     float (*cfa), containing the CFA values in a [0-1] floating point range
     float (*rgb)[3], containing the int (*image)[4] values in a [0-1] floating point range
