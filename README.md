@@ -42,21 +42,16 @@ The gradients are empirically optimized.
 
 ## Usage
 
-I provide binary files built in Visual Studio C++ 2015 under Windows 8.1 and GCC under Lubuntu 16.04.
+I provide binary files built in Visual Studio C++ 2015 under Windows 8.1 (64-bit) and GCC under Lubuntu 16.04 (32-bit).
 
-To run RCD, use the flag "-q 4". Command example:
+To run RCD, use the attribute "-q 4". Command example:
 
     dcraw -v -T -6 -H 0 -W -o 1 -w -q 4 file.raw
 
-The algorithm can be compiled manually. To be pluggable to dcraw, it expects two buffers to be declared prior to the first step:
+The algorithm can be compiled manually. In VSC++ 2015 I run
 
-    float (*cfa), containing the CFA values in a [0-1] floating point range
-    float (*rgb)[3], containing the int (*image)[4] values in a [0-1] floating point range
+    cl /nologo /Ox /w /DWIN32 /DDJGPP /DNO_JASPER /DNO_LCMS /DNO_JPEG /Iinclude /Fedcraw.exe dcraw.c /link /subsystem:console user32.lib
 
-Both can be filled in a single pass to all the image pixels:
+In GCC, I use
 
-    cfa[indx] = rgb[indx][FC(row,col)] = (float) image[indx][FC(row,col)] / 65535.f;
-
-The algorithm outputs its results by modifying the buffer "rgb", which later should be returned to the usual form of image[4] dcraw uses:
-
-    FORCC image[row*width+col][c] = (ushort) CLIP( 65535.f*rgb[row*width+col][c] );
+    gcc -o dcraw -O4 ./dcraw.c -w -lm -DNO_JPEG -DNO_LCMS -DNO_JASPER
