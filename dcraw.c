@@ -10202,7 +10202,7 @@ next:
       else if (filters == 9)
 	xtrans_interpolate (quality*2-3);
       else if (quality == 4)
-  rcd_demosaicing_171117();
+  rcd_demosaicing();
       else
 	ahd_interpolate();
     }
